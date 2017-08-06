@@ -5,6 +5,8 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,6 +23,7 @@ import org.java_websocket.drafts.Draft_17;
 import org.java_websocket.framing.Framedata;
 import org.java_websocket.handshake.ServerHandshake;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
 public class WebSocketUtils extends WebSocketClient {
@@ -29,7 +32,14 @@ public class WebSocketUtils extends WebSocketClient {
 	private static String url = "wss://api.huobi.com/ws";
 
 	private static WebSocketUtils chatclient = null;
+	
+	private static Map<Long, String> idToType = new HashMap();
+	
+	private static String reqKlineWritePath = "D:\\stock data\\altcoin\\btc_huobi\\hist data";
 
+	private static ArrayList<SubModel> subModelArr = new ArrayList<SubModel>();
+	private static ArrayList<ReqModel> reqModelArr = new ArrayList<ReqModel>();
+	
 	public WebSocketUtils(URI serverUri, Draft draft) {
 		super(serverUri, draft);
 	}
@@ -108,7 +118,52 @@ public class WebSocketUtils extends WebSocketClient {
 				// Client 心跳
 				chatclient.send(market.replace("ping", "pong"));
 			} else {
-				System.out.println(" market:" + market);
+				JSONObject json = JSONObject.parseObject(market);
+				long id = Long.parseLong(json.get("id").toString());
+				//System.out.println("json id = " + id);
+				
+				// get type
+				String type = idToType.get(id);
+				String[] typeArr = type.split(",");
+				String type0 = typeArr[0];
+				String type1 = typeArr[1];
+				
+				if(type0.equals("req")){
+					switch(type1){
+						case "kline":
+							dealReqKline(json);
+							break;
+						case "marketdepth":
+							break;
+						case "tradedetail":
+							break;
+						case "marketdetail":
+							break;
+						default:
+							break;
+					
+					}
+						
+				}
+				
+				if(type0.equals("sub")){
+					switch(type1){
+					case "kline":
+						// deal with kline
+						break;
+					case "marketdepth":
+						break;
+					case "tradedetail":
+						break;
+					default:
+						break;
+				
+				}
+				}
+				
+				System.out.println(" market:" + json.get("id"));
+				
+				System.out.println(" market:" + market );
 
 			}
 		} catch (IOException e) {
@@ -177,6 +232,17 @@ public class WebSocketUtils extends WebSocketClient {
 			System.out.println("Url uncorrect: " + info);
 			return;
 		}
+		// store id & type
+		if(SubOrReqModel.getClass().toString().equals("class huobi.ReqModel")){
+			ReqModel req = (ReqModel) SubOrReqModel;
+			idToType.put(req.getId(), req.getType());
+			reqModelArr.add(req);
+		}
+		if(SubOrReqModel.getClass().toString().equals("class huobi.SubModel")){
+			SubModel sub = (SubModel) SubOrReqModel;
+			idToType.put(sub.getId(), sub.getType());
+			subModelArr.add(sub);
+		}
 		
 		// WebSocketImpl.DEBUG = true;
 		chatclient = new WebSocketUtils(new URI(url), getWebSocketHeaders(), 1000);
@@ -239,5 +305,53 @@ public class WebSocketUtils extends WebSocketClient {
 			    HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
 			} catch (Exception e) {
 			}
+	}
+	
+	public static boolean dealReqKline(JSONObject json) {
+		boolean isOK = true;
+		try{
+			//JSONObject klineDataJSON = json.getJSONObject("data");
+			JSONArray klineDataArr = json.getJSONArray("data");
+			for(int i = 0; i < klineDataArr.size(); i++){
+				JSONObject singleKline = klineDataArr.getJSONObject(i);
+				
+				String amount = singleKline.get("amount").toString();
+				String open = singleKline.get("open").toString();
+				String close = singleKline.get("close").toString();
+				String high = singleKline.get("high").toString();
+				String low = singleKline.get("low").toString();
+				String vol = singleKline.get("vol").toString();
+				String id = singleKline.get("id").toString();  // kline id is its time
+				String count = singleKline.get("count").toString();
+				String time = "";
+				
+				// parse time
+				Calendar cal = Calendar.getInstance();
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				cal.setTime(sdf.parse("1970-01-01 08:00:00"));
+				cal.add(Calendar.SECOND, Integer.parseInt(id));
+				time = sdf.format(cal.getTime());
+				System.out.println("====== kline id = " + sdf.format(cal.getTime()) + " ======");
+				
+				System.out.println("open = " + open + " high = " + high + " low = " + low + " close = " + close + " vol = " + vol);
+				// write to file
+				//String writePath = getReqKlineWritePath() + 
+
+				
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+			isOK = false;
+		}
+		
+		return isOK;
+	}
+
+	public static String getReqKlineWritePath() {
+		return reqKlineWritePath;
+	}
+
+	public static void setReqKlineWritePath(String reqKlineWritePath) {
+		WebSocketUtils.reqKlineWritePath = reqKlineWritePath;
 	}
 }

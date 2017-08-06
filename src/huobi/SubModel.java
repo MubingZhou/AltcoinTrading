@@ -3,6 +3,15 @@ package huobi;
 public class SubModel {
 	private String sub;
 	private Long id;
+	private String type;
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
 
 	public String getSub() {
 		return sub;
@@ -28,6 +37,8 @@ public class SubModel {
 		sub0.setSub(topic);
 		sub0.setId(id);
 		
+		sub0.setType("sub,kline");
+		
 		return sub0;
 	}
 	
@@ -39,6 +50,8 @@ public class SubModel {
 		sub0.setSub(topic);
 		sub0.setId(id);
 		
+		sub0.setType("sub,marketdepth");
+		
 		return sub0;
 	}
 	
@@ -49,6 +62,8 @@ public class SubModel {
 		
 		sub0.setSub(topic);
 		sub0.setId(id);
+		
+		sub0.setType("sub,tradedetail");
 		
 		return sub0;
 	}

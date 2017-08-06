@@ -7,6 +7,7 @@ public class ReqModel {
 	private Long id;
 	private long from;
 	private long to;
+	private String type;
 
 	public String getReq() {
 		return req;
@@ -40,13 +41,15 @@ public class ReqModel {
 		this.to = to;
 	}
 	
-	public static ReqModel getKLineReqModel(String symbol, String period, long id){
+	private static ReqModel getKLineReqModel(String symbol, String period, long id){
 		ReqModel req0 = new ReqModel();
 		
 		String topic = "market." + symbol + ".kline." + period;
 		
 		req0.setReq(topic);
 		req0.setId(id);
+		
+		req0.type = "req,kline";
 		
 		return req0;
 	}
@@ -59,8 +62,8 @@ public class ReqModel {
 		
 		try{
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			fromLong = sdf.parse(from).getTime();
-			toLong = sdf.parse(to).getTime();
+			fromLong = sdf.parse(from).getTime() / 1000 - 1;
+			toLong = sdf.parse(to).getTime() / 1000;
 		}catch(Exception e){
 			e.printStackTrace();
 		}
@@ -68,6 +71,8 @@ public class ReqModel {
 		
 		req0.setFrom(fromLong);
 		req0.setTo(toLong);
+		
+		req0.type = "req,kline";
 		
 		return req0;
 	}
@@ -80,6 +85,8 @@ public class ReqModel {
 		req0.setReq(topic);
 		req0.setId(id);
 		
+		req0.type = "req,marketdepth";
+		
 		return req0;
 	}
 	
@@ -90,6 +97,8 @@ public class ReqModel {
 		
 		req0.setReq(topic);
 		req0.setId(id);
+		
+		req0.type = "req,tradedetail";
 		
 		return req0;
 	}
@@ -102,7 +111,17 @@ public class ReqModel {
 		req0.setReq(topic);
 		req0.setId(id);
 		
+		req0.type = "req,marketdetail";
+		
 		return req0;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
 	}
 	
 }
