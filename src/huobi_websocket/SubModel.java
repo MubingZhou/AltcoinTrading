@@ -1,9 +1,11 @@
-package huobi;
+package huobi_websocket;
 
 public class SubModel {
 	private String sub;
-	private Long id;
+	private String id;
 	private String type;
+	private String period;
+	private String symbol;
 
 	public String getType() {
 		return type;
@@ -21,15 +23,15 @@ public class SubModel {
 		this.sub = sub;
 	}
 
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
-	public void setId(Long id) {
+	public void setId(String id) {
 		this.id = id;
 	}
 	
-	public static SubModel getKLineSubModel(String symbol, String period, long id){
+	public static SubModel getKLineSubModel(String symbol, String period, String id){
 		SubModel sub0 = new SubModel();
 		
 		String topic = "market." + symbol + ".kline." + period;
@@ -38,11 +40,13 @@ public class SubModel {
 		sub0.setId(id);
 		
 		sub0.setType("sub,kline");
+		sub0.setPeriod(period);
+		sub0.setSymbol(symbol);
 		
 		return sub0;
 	}
 	
-	public static SubModel getMarketDepthSubModel(String symbol, String type, long id){
+	public static SubModel getMarketDepthSubModel(String symbol, String type, String id){
 		SubModel sub0 = new SubModel();
 		
 		String topic = "market." + symbol + ".depth." + type;
@@ -51,11 +55,12 @@ public class SubModel {
 		sub0.setId(id);
 		
 		sub0.setType("sub,marketdepth");
+		sub0.setSymbol(symbol);
 		
 		return sub0;
 	}
 	
-	public static SubModel getTradeDetailSubModel(String symbol, long id){
+	public static SubModel getTradeDetailSubModel(String symbol, String id){
 		SubModel sub0 = new SubModel();
 		
 		String topic = "market." + symbol + ".trade.detail";
@@ -64,7 +69,24 @@ public class SubModel {
 		sub0.setId(id);
 		
 		sub0.setType("sub,tradedetail");
+		sub0.setSymbol(symbol);
 		
 		return sub0;
+	}
+
+	public String getPeriod() {
+		return period;
+	}
+
+	public void setPeriod(String period) {
+		this.period = period;
+	}
+
+	public String getSymbol() {
+		return symbol;
+	}
+
+	public void setSymbol(String symbol) {
+		this.symbol = symbol;
 	}
 }

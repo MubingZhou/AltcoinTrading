@@ -1,4 +1,4 @@
-package huobi;
+package huobi_websocket;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

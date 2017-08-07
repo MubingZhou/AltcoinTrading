@@ -1,5 +1,7 @@
-package huobi;
+package huobi_websocket;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -33,7 +35,7 @@ public class WebSocketUtils extends WebSocketClient {
 
 	private static WebSocketUtils chatclient = null;
 	
-	private static Map<Long, String> idToType = new HashMap();
+	private static Map<String, String> idToType = new HashMap();
 	
 	private static String reqKlineWritePath = "D:\\stock data\\altcoin\\btc_huobi\\hist data";
 
@@ -102,6 +104,30 @@ public class WebSocketUtils extends WebSocketClient {
 		
 		return returnInfo;
 	}
+	
+	public static void toConnect(){
+		try{
+			if(chatclient == null){
+				chatclient = new WebSocketUtils(new URI(url), getWebSocketHeaders(), 1000);
+				//trustAllHosts(chatclient);
+				//trustAllCertificates();
+				chatclient.connectBlocking();
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+	
+	public static void toClose(){
+		try{
+			if(chatclient != null){
+				chatclient.close();
+				//System.out.println("closed");
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
 
 	@Override
 	public void onOpen(ServerHandshake handshakedata) {
@@ -110,6 +136,7 @@ public class WebSocketUtils extends WebSocketClient {
 
 	@Override
 	public void onMessage(ByteBuffer socketBuffer) {
+		System.out.println("********** Msg received! deal... **********");
 		try {
 			String marketStr = CommonUtils.byteBufferToString(socketBuffer);
 			String market = CommonUtils.uncompress(marketStr);
@@ -119,8 +146,20 @@ public class WebSocketUtils extends WebSocketClient {
 				chatclient.send(market.replace("ping", "pong"));
 			} else {
 				JSONObject json = JSONObject.parseObject(market);
-				long id = Long.parseLong(json.get("id").toString());
-				//System.out.println("json id = " + id);
+				String id = json.get("id").toString();
+				System.out.println("Msg id = " + id);
+				// deal with errors
+				String status = json.get("status").toString();
+				if(status.equals("error")){// error
+					String errorCode = json.get("err-code").toString();
+					String errorMsg = json.get("err-msg").toString();
+					System.out.println("Error occurs!");
+					System.out.println("Error code: " + errorCode);
+					System.out.println("Error msg: " + errorMsg);
+					
+					System.out.println("********** Msg dealing end! **********");
+					return;
+				}
 				
 				// get type
 				String type = idToType.get(id);
@@ -161,14 +200,16 @@ public class WebSocketUtils extends WebSocketClient {
 				}
 				}
 				
-				System.out.println(" market:" + json.get("id"));
+				//System.out.println(" market:" + json.get("id"));
 				
-				System.out.println(" market:" + market );
+				//System.out.println(" market:" + market );
 
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		System.out.println("********** Msg dealing end! **********");
 	}
 
 	@Override
@@ -226,29 +267,23 @@ public class WebSocketUtils extends WebSocketClient {
 	 * @param topic
 	 * @throws Exception
 	 */
-	public static void executeWebSocket(String tradepair, Object SubOrReqModel) throws Exception {
+	public static void toSend(String tradepair, Object SubOrReqModel) throws Exception {
 		String info = setUrl(tradepair, "tradepair");
 		if(!info.equals("OK")){
 			System.out.println("Url uncorrect: " + info);
 			return;
 		}
 		// store id & type
-		if(SubOrReqModel.getClass().toString().equals("class huobi.ReqModel")){
+		if(SubOrReqModel.getClass().toString().equals("class huobi_websocket.ReqModel")){
 			ReqModel req = (ReqModel) SubOrReqModel;
 			idToType.put(req.getId(), req.getType());
 			reqModelArr.add(req);
 		}
-		if(SubOrReqModel.getClass().toString().equals("class huobi.SubModel")){
+		if(SubOrReqModel.getClass().toString().equals("class huobi_websocket.SubModel")){
 			SubModel sub = (SubModel) SubOrReqModel;
 			idToType.put(sub.getId(), sub.getType());
 			subModelArr.add(sub);
 		}
-		
-		// WebSocketImpl.DEBUG = true;
-		chatclient = new WebSocketUtils(new URI(url), getWebSocketHeaders(), 1000);
-		//trustAllHosts(chatclient);
-		//trustAllCertificates();
-		chatclient.connectBlocking();
 		
 		chatclient.send(JSONObject.toJSONString(SubOrReqModel));
 		
@@ -308,42 +343,70 @@ public class WebSocketUtils extends WebSocketClient {
 	}
 	
 	public static boolean dealReqKline(JSONObject json) {
+		// column configuration: datetime,open,high,low,close,amount(#),vol($),count
 		boolean isOK = true;
 		try{
+			String id = json.get("id").toString();
+			System.out.println("====== Get msg, dealing KLine Req, id = " + id + " ======");
+			
+			// get ReqModel
+			ReqModel req = new ReqModel();
+			for(int j = 0; j < reqModelArr.size(); j++){
+				ReqModel req0 = reqModelArr.get(j);
+				if(req0.getId().equals(id)){
+					System.out.println("get ReqModel id = " + id);
+					req = req0;
+					break;
+				}
+			}
+			
+			// write to file
+			String fileName = req.getSymbol() + " " + req.getPeriod() + ".csv";
+			String writePath = getReqKlineWritePath() + "\\" + fileName;
+			//File f = new File(writePath);
+			FileWriter fw = new FileWriter(writePath, true); // append to the file
+			//if(!(f.exists() && f.isDirectory()))
+			//	fw.write("datetime,open,high,low,close,amount(#),vol($),count\n"); // if file not exists, write the header
+			
 			//JSONObject klineDataJSON = json.getJSONObject("data");
 			JSONArray klineDataArr = json.getJSONArray("data");
 			for(int i = 0; i < klineDataArr.size(); i++){
 				JSONObject singleKline = klineDataArr.getJSONObject(i);
 				
-				String amount = singleKline.get("amount").toString();
+				String amount = singleKline.get("amount").toString();  // # of coins traded
 				String open = singleKline.get("open").toString();
 				String close = singleKline.get("close").toString();
 				String high = singleKline.get("high").toString();
 				String low = singleKline.get("low").toString();
-				String vol = singleKline.get("vol").toString();
-				String id = singleKline.get("id").toString();  // kline id is its time
-				String count = singleKline.get("count").toString();
+				String vol = singleKline.get("vol").toString();  // cash value of coins traded
+				String klineId = singleKline.get("id").toString();  // kline id is its time
+				String count = singleKline.get("count").toString(); // # of trades in this kline
 				String time = "";
 				
 				// parse time
 				Calendar cal = Calendar.getInstance();
 				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 				cal.setTime(sdf.parse("1970-01-01 08:00:00"));
-				cal.add(Calendar.SECOND, Integer.parseInt(id));
+				cal.add(Calendar.SECOND, Integer.parseInt(klineId));
 				time = sdf.format(cal.getTime());
-				System.out.println("====== kline id = " + sdf.format(cal.getTime()) + " ======");
+				//System.out.println("====== kline id = " + sdf.format(cal.getTime()) + " ======");
 				
-				System.out.println("open = " + open + " high = " + high + " low = " + low + " close = " + close + " vol = " + vol);
+				//System.out.println("open = " + open + " high = " + high + " low = " + low + " close = " + close + " vol = " + vol);
+				
 				// write to file
-				//String writePath = getReqKlineWritePath() + 
+				fw.write(time + "," + open + "," + high + "," + low + "," + close + ","
+						+ amount + "," + vol + "," + count + "\n");
 
 				
 			}
+			
+			fw.close();
 		}catch(Exception e){
 			e.printStackTrace();
 			isOK = false;
 		}
 		
+		System.out.println("====== Dealing KLine Req END ======");
 		return isOK;
 	}
 

@@ -1,13 +1,16 @@
-package huobi;
+package huobi_websocket;
 
 import java.text.SimpleDateFormat;
 
 public class ReqModel {
+	// for req, can request about 300 data each time
 	private String req;
-	private Long id;
+	private String id;
 	private long from;
 	private long to;
 	private String type;
+	private String period = "";
+	private String symbol;
 
 	public String getReq() {
 		return req;
@@ -17,11 +20,11 @@ public class ReqModel {
 		this.req = req;
 	}
 
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
-	public void setId(Long id) {
+	public void setId(String id) {
 		this.id = id;
 	}
 
@@ -41,7 +44,7 @@ public class ReqModel {
 		this.to = to;
 	}
 	
-	private static ReqModel getKLineReqModel(String symbol, String period, long id){
+	private static ReqModel getKLineReqModel(String symbol, String period, String id){
 		ReqModel req0 = new ReqModel();
 		
 		String topic = "market." + symbol + ".kline." + period;
@@ -49,12 +52,15 @@ public class ReqModel {
 		req0.setReq(topic);
 		req0.setId(id);
 		
-		req0.type = "req,kline";
+		req0.setType("req,kline");
+		req0.setPeriod(period);
+		req0.setSymbol(symbol);
 		
 		return req0;
 	}
 	
-	public static ReqModel getKLineReqModel(String symbol, String period, long id, String from, String to){
+	public static ReqModel getKLineReqModel(String symbol, String period, String id, String from, String to){
+		// "from" inclusive, "to" exclusive
 		ReqModel req0 = getKLineReqModel(symbol, period, id);
 		
 		long fromLong = 0;
@@ -63,7 +69,7 @@ public class ReqModel {
 		try{
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 			fromLong = sdf.parse(from).getTime() / 1000 - 1;
-			toLong = sdf.parse(to).getTime() / 1000;
+			toLong = sdf.parse(to).getTime() / 1000-1;
 		}catch(Exception e){
 			e.printStackTrace();
 		}
@@ -72,12 +78,14 @@ public class ReqModel {
 		req0.setFrom(fromLong);
 		req0.setTo(toLong);
 		
-		req0.type = "req,kline";
+		req0.setType("req,kline");
+		req0.setPeriod(period);
+		req0.setSymbol(symbol);
 		
 		return req0;
 	}
 	
-	public static ReqModel getMarketDepthReqModel(String symbol, String type, long id){
+	public static ReqModel getMarketDepthReqModel(String symbol, String type, String id){
 		ReqModel req0 = new ReqModel();
 		
 		String topic = "market." + symbol + ".depth." + type;
@@ -85,12 +93,13 @@ public class ReqModel {
 		req0.setReq(topic);
 		req0.setId(id);
 		
-		req0.type = "req,marketdepth";
+		req0.setType("req,marketdepth");
+		req0.setSymbol(symbol);
 		
 		return req0;
 	}
 	
-	public static ReqModel getTradeDetailReqModel(String symbol, long id){
+	public static ReqModel getTradeDetailReqModel(String symbol, String id){
 		ReqModel req0 = new ReqModel();
 		
 		String topic = "market." + symbol + ".trade.detail";
@@ -98,12 +107,13 @@ public class ReqModel {
 		req0.setReq(topic);
 		req0.setId(id);
 		
-		req0.type = "req,tradedetail";
+		req0.setType("req,tradedetail");
+		req0.setSymbol(symbol);
 		
 		return req0;
 	}
 	
-	public static ReqModel getMarketDetailReqModel(String symbol, long id){
+	public static ReqModel getMarketDetailReqModel(String symbol, String id){
 		ReqModel req0 = new ReqModel();
 		
 		String topic = "market." + symbol + ".detail";
@@ -111,7 +121,8 @@ public class ReqModel {
 		req0.setReq(topic);
 		req0.setId(id);
 		
-		req0.type = "req,marketdetail";
+		req0.setType("req,marketdetail");
+		req0.setSymbol(symbol);
 		
 		return req0;
 	}
@@ -122,6 +133,22 @@ public class ReqModel {
 
 	public void setType(String type) {
 		this.type = type;
+	}
+
+	public String getPeriod() {
+		return period;
+	}
+
+	public void setPeriod(String period) {
+		this.period = period;
+	}
+
+	public String getSymbol() {
+		return symbol;
+	}
+
+	public void setSymbol(String symbol) {
+		this.symbol = symbol;
 	}
 	
 }
